@@ -1,0 +1,194 @@
+// Prisma Schema — Occas Ordi V2
+// Magasin d'informatique : stock, admin MFA, étiquettes
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ADMIN USER (panel sécurisé + MFA TOTP)
+// ─────────────────────────────────────────────
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String   // bcrypt hash
+  name        String
+  role        Role     @default(ADMIN)
+
+  // MFA (TOTP — Google Authenticator / Authy)
+  mfaEnabled  Boolean  @default(false)
+  mfaSecret   String?  // secret TOTP (chiffré en base)
+  mfaVerified Boolean  @default(false) // true après 1er scan validé
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  computers   Computer[]
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+}
+
+// ─────────────────────────────────────────────
+// ORDINATEUR (stock magasin)
+// ─────────────────────────────────────────────
+model Computer {
+  id          String       @id @default(cuid())
+
+  // Identification
+  sku         String       @unique // ex: "2024-0042"
+  type        ComputerType
+  brand       String?              // ex: "HP", "Dell", "Apple"
+
+  // Processeur
+  cpuBrand    CpuBrand
+  cpuModel    String       // ex: "Core i5-8400"
+  cpuGen      String?      // ex: "8ème Gen"
+
+  // Mémoire RAM
+  ramSize     Int          // GB  ex: 16
+  ramType     RamType
+
+  // Stockage
+  storageSize Int          // GB  ex: 512
+  storageType StorageType
+
+  // Affichage (laptops / all-in-one)
+  screenSize  String?      // ex: "15.6\""
+  screenRes   String?      // ex: "1920x1080"
+
+  // GPU dédié (optionnel)
+  gpuModel    String?      // ex: "GTX 1650"
+
+  // État & prix
+  condition   Condition
+  grade       Grade
+  price       Decimal      @db.Decimal(8, 2)
+  priceOld    Decimal?     @db.Decimal(8, 2) // prix barré
+  currency    String       @default("EUR")
+
+  // OS & divers
+  os          OsType?
+  color       String?
+  notes       String?
+  imageUrl    String?      // URL photo du produit
+
+  // Relations
+  addedBy     User         @relation(fields: [userId], references: [id])
+  userId      String
+  label       Label?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([type, condition])
+  @@index([cpuBrand])
+}
+
+// ─────────────────────────────────────────────
+// ÉTIQUETTE MAGASIN
+// Format paysage 200mm x 35mm
+// Positions fixes (en mm depuis coin haut-gauche)
+// ─────────────────────────────────────────────
+model Label {
+  id          String    @id @default(cuid())
+
+  computer    Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  computerId  String    @unique
+
+  // Zone SKU / type (haut-gauche)
+  posSkuX     Float     @default(5)
+  posSkuY     Float     @default(4)
+
+  // Zone CPU (colonne 1)
+  posCpuX     Float     @default(5)
+  posCpuY     Float     @default(14)
+
+  // Zone RAM (colonne 2)
+  posRamX     Float     @default(72)
+  posRamY     Float     @default(14)
+
+  // Zone Stockage (colonne 3)
+  posStorageX Float     @default(120)
+  posStorageY Float     @default(14)
+
+  // Zone Prix (droite, grand format)
+  posPriceX   Float     @default(155)
+  posPriceY   Float     @default(8)
+
+  // Zone Grade (bas-gauche)
+  posGradeX   Float     @default(5)
+  posGradeY   Float     @default(26)
+
+  // Suivi impression
+  printed     Boolean   @default(false)
+  printedAt   DateTime?
+  printCount  Int       @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// ENUMS — CHOIX PRÉDÉFINIS DU FORMULAIRE
+// ─────────────────────────────────────────────
+
+enum ComputerType {
+  DESKTOP
+  LAPTOP
+  ALL_IN_ONE
+  MINI_PC
+  WORKSTATION
+}
+
+enum CpuBrand {
+  INTEL
+  AMD
+  APPLE
+}
+
+enum RamType {
+  DDR3
+  DDR4
+  DDR5
+  LPDDR4
+  LPDDR5
+  UNIFIED // Apple Silicon
+}
+
+enum StorageType {
+  HDD
+  SSD_SATA
+  SSD_NVME
+  EMMC
+}
+
+enum Condition {
+  NEUF
+  RECONDITIONNE
+  OCCASION
+}
+
+enum Grade {
+  A_PLUS // Comme neuf, aucun défaut
+  A      // Très bon état, traces légères
+  B      // Bon état, quelques marques visibles
+  C      // Fonctionnel, marques importantes
+}
+
+enum OsType {
+  WINDOWS_11
+  WINDOWS_11_PRO
+  WINDOWS_10
+  WINDOWS_10_PRO
+  MACOS
+  LINUX
+  SANS_OS
+}

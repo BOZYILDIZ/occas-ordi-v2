@@ -39,9 +39,6 @@ export default async function HomePage() {
             <Link href="/catalogue" className="text-gray-400 hover:text-white text-sm transition-colors">
               Catalogue
             </Link>
-            <Link href="/admin/login" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
-              Admin
-            </Link>
           </div>
         </div>
       </nav>

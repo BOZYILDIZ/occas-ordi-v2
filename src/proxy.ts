@@ -10,7 +10,7 @@ export const config = {
   matcher: [
     // Protège tout /admin/* SAUF la page login elle-même
     "/admin/((?!login).*)",
-    "/api/computers/:path*",
+    // Note: /api/computers GET est public, la protection est gérée route par route
     "/api/labels/:path*",
   ],
 };

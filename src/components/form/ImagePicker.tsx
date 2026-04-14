@@ -9,71 +9,89 @@ type Props = {
   searchQuery?: string;
 };
 
-// ── Suppression du fond par flood fill depuis les 4 coins ──────────────────
+// ── Suppression du fond — flood fill depuis tous les bords ─────────────────
 function removeBackground(imageData: ImageData): ImageData {
   const { data, width, height } = imageData;
-  const visited = new Uint8Array(width * height);
 
-  const idx = (x: number, y: number) => (y * width + x) * 4;
+  // ── Étape 1 : détecter la couleur du fond depuis tous les bords ────────────
+  const samples: [number, number, number][] = [];
+  for (let x = 0; x < width; x++) {
+    let i = x * 4;
+    samples.push([data[i], data[i + 1], data[i + 2]]);
+    i = ((height - 1) * width + x) * 4;
+    samples.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    let i = (y * width) * 4;
+    samples.push([data[i], data[i + 1], data[i + 2]]);
+    i = (y * width + width - 1) * 4;
+    samples.push([data[i], data[i + 1], data[i + 2]]);
+  }
 
-  // Récupère la couleur d'un pixel
-  const getColor = (x: number, y: number) => {
-    const i = idx(x, y);
-    return { r: data[i], g: data[i + 1], b: data[i + 2], a: data[i + 3] };
+  // Garder seulement les pixels clairs (fond probable)
+  const lightSamples = samples.filter(([r, g, b]) => 0.299 * r + 0.587 * g + 0.114 * b > 170);
+  const bgR = lightSamples.length ? Math.round(lightSamples.reduce((s, [r]) => s + r, 0) / lightSamples.length) : 255;
+  const bgG = lightSamples.length ? Math.round(lightSamples.reduce((s, [, g]) => s + g, 0) / lightSamples.length) : 255;
+  const bgB = lightSamples.length ? Math.round(lightSamples.reduce((s, [,, b]) => s + b, 0) / lightSamples.length) : 255;
+
+  // ── Étape 2 : flood fill depuis TOUS les pixels de bord ────────────────────
+  const TOLERANCE = 28;
+  const transparent = new Uint8Array(width * height);
+  const visited     = new Uint8Array(width * height);
+
+  const dist = (r: number, g: number, b: number) =>
+    Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
+
+  const stack: number[] = [];
+  const push = (x: number, y: number) => {
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    const p = y * width + x;
+    if (!visited[p]) stack.push(p);
   };
 
-  // Distance colorimétrique entre deux pixels
-  const colorDist = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number) =>
-    Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+  // Seeder depuis tous les bords
+  for (let x = 0; x < width; x++) { push(x, 0); push(x, height - 1); }
+  for (let y = 1; y < height - 1; y++) { push(0, y); push(width - 1, y); }
 
-  // Flood fill depuis un point de départ avec une tolérance
-  const floodFill = (startX: number, startY: number, tolerance: number) => {
-    const { r: sr, g: sg, b: sb } = getColor(startX, startY);
-    const stack: [number, number][] = [[startX, startY]];
+  while (stack.length > 0) {
+    const p = stack.pop()!;
+    if (visited[p]) continue;
+    visited[p] = 1;
+    const i = p * 4;
+    if (dist(data[i], data[i + 1], data[i + 2]) > TOLERANCE) continue;
+    transparent[p] = 1;
+    const x = p % width, y = Math.floor(p / width);
+    push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
+  }
 
-    while (stack.length > 0) {
-      const [x, y] = stack.pop()!;
-      if (x < 0 || x >= width || y < 0 || y >= height) continue;
+  // ── Étape 3 : appliquer la transparence ────────────────────────────────────
+  for (let p = 0; p < width * height; p++) {
+    if (transparent[p]) data[p * 4 + 3] = 0;
+  }
 
-      const pIdx = y * width + x;
-      if (visited[pIdx]) continue;
-
-      const { r, g, b, a } = getColor(x, y);
-      if (a === 0) { visited[pIdx] = 1; continue; }
-      if (colorDist(r, g, b, sr, sg, sb) > tolerance) continue;
-
-      visited[pIdx] = 1;
-
-      // Rendre transparent
-      const i = idx(x, y);
-      data[i + 3] = 0;
-
-      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+  // ── Étape 4 : anti-aliasing sur 2 pixels de bord ───────────────────────────
+  // Passe 1 : bord direct (alpha 100)
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const p = y * width + x;
+      if (transparent[p]) continue;
+      const border =
+        transparent[(y - 1) * width + x] || transparent[(y + 1) * width + x] ||
+        transparent[y * width + (x - 1)]  || transparent[y * width + (x + 1)];
+      if (border) data[p * 4 + 3] = 100;
     }
-  };
-
-  const tolerance = 35;
-
-  // Flood fill depuis les 4 coins
-  floodFill(0, 0, tolerance);
-  floodFill(width - 1, 0, tolerance);
-  floodFill(0, height - 1, tolerance);
-  floodFill(width - 1, height - 1, tolerance);
-
-  // Lissage des bords : rendre semi-transparents les pixels adjacents au fond
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = idx(x, y);
-      if (data[i + 3] === 255) {
-        const neighbors = [
-          [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1],
-        ];
-        const hasTransparentNeighbor = neighbors.some(([nx, ny]) => {
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height) return false;
-          return data[idx(nx, ny) + 3] === 0;
-        });
-        if (hasTransparentNeighbor) data[i + 3] = 180;
-      }
+  }
+  // Passe 2 : bord secondaire (alpha 200)
+  for (let y = 2; y < height - 2; y++) {
+    for (let x = 2; x < width - 2; x++) {
+      const p = y * width + x;
+      if (transparent[p] || data[p * 4 + 3] < 255) continue;
+      const nearBorder =
+        data[((y - 1) * width + x) * 4 + 3] < 255 ||
+        data[((y + 1) * width + x) * 4 + 3] < 255 ||
+        data[(y * width + (x - 1)) * 4 + 3] < 255 ||
+        data[(y * width + (x + 1)) * 4 + 3] < 255;
+      if (nearBorder) data[p * 4 + 3] = 200;
     }
   }
 

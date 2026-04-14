@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
       { protocol: "http",  hostname: "**" },
     ],
+    // Autoriser les data URLs (PNG base64 générés après suppression du fond)
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
   },
 };
 

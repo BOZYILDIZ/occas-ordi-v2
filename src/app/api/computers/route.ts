@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Augmenter la limite du body pour accepter les images base64
+export const maxDuration = 30;
+export const dynamic = "force-dynamic";
+
 // GET /api/computers — liste le stock
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

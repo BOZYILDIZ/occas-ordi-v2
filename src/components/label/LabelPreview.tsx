@@ -427,27 +427,29 @@ export const LabelPreview = React.forwardRef<HTMLDivElement, LabelProps>(
           <div style={{ fontSize: `${5.5 * S}px`, color: "#9ca3af", letterSpacing: "0.08em" }}>
             TTC
           </div>
-          <div style={{
-            display:       "flex",
-            alignItems:    "center",
-            gap:           `${2 * S}px`,
-            padding:       `${2 * S}px ${4 * S}px`,
-            borderRadius:  `${3 * S}px`,
-            background:    g.bg,
-            color:         g.text,
-            fontSize:      `${7.5 * S}px`,
-            fontWeight:    "800",
-            letterSpacing: "0.05em",
-          }}>
-            <span style={{
-              width: `${7 * S}px`, height: `${7 * S}px`,
-              borderRadius: "50%",
-              background:   g.accent,
-              display:      "inline-block",
-              flexShrink:   0,
-            }} />
-            Grade {g.label}
-          </div>
+          {data.condition !== "NEUF" && (
+            <div style={{
+              display:       "flex",
+              alignItems:    "center",
+              gap:           `${2 * S}px`,
+              padding:       `${2 * S}px ${4 * S}px`,
+              borderRadius:  `${3 * S}px`,
+              background:    g.bg,
+              color:         g.text,
+              fontSize:      `${7.5 * S}px`,
+              fontWeight:    "800",
+              letterSpacing: "0.05em",
+            }}>
+              <span style={{
+                width: `${7 * S}px`, height: `${7 * S}px`,
+                borderRadius: "50%",
+                background:   g.accent,
+                display:      "inline-block",
+                flexShrink:   0,
+              }} />
+              Grade {g.label}
+            </div>
+          )}
           <div style={{ fontSize: `${5.5 * S}px`, color: "#6b7280", fontWeight: "500" }}>
             {data.condition === "RECONDITIONNE" ? "Reconditionné"
              : data.condition === "NEUF" ? "Neuf" : "Occasion"}

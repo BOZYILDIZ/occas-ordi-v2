@@ -220,7 +220,7 @@ export default function CataloguePage() {
                       <div className="p-4">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[#6e6e73] text-xs font-medium">
-                            Grade {gradeLabels[c.grade] ?? c.grade}
+                            {c.condition === "NEUF" ? "Neuf" : `Grade ${gradeLabels[c.grade] ?? c.grade}`}
                           </span>
                           <span className="text-[#86868b] text-xs font-mono">{c.sku}</span>
                         </div>

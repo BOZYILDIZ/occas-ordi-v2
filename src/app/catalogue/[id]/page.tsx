@@ -130,9 +130,11 @@ export default async function ComputerDetailPage({
                   {computer.brand ? `${computer.brand} ` : ""}{computer.cpuModel}
                 </h1>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-[#f5f5f7] rounded-full text-[#1d1d1f] text-sm font-medium">
-                    Grade {GRADE_LABEL[computer.grade] ?? computer.grade}
-                  </span>
+                  {computer.condition !== "NEUF" && (
+                    <span className="inline-flex items-center px-3 py-1 bg-[#f5f5f7] rounded-full text-[#1d1d1f] text-sm font-medium">
+                      Grade {GRADE_LABEL[computer.grade] ?? computer.grade}
+                    </span>
+                  )}
                   <span className="text-[#86868b] text-sm font-mono">{computer.sku}</span>
                 </div>
               </div>

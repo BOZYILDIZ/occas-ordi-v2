@@ -254,9 +254,9 @@ export default function NewComputerPage() {
               />
             </Field>
             {isNeuf ? (
-              <div key="grade-neuf" className="flex items-center gap-2 px-3 py-2 bg-emerald-900/20 border border-emerald-800 rounded-lg col-span-1">
-                <span className="text-emerald-400 text-sm font-medium">Grade A+</span>
-                <span className="text-emerald-600 text-xs">— attribué automatiquement (article neuf)</span>
+              <div key="grade-neuf" className="flex items-center gap-2 px-3 py-2 bg-zinc-800/40 border border-zinc-700 rounded-lg col-span-1">
+                <span className="text-zinc-500 text-sm">Grade</span>
+                <span className="text-zinc-600 text-xs">— non applicable (article neuf)</span>
               </div>
             ) : (
               <Field key="grade-select" label="Grade *">
